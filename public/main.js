@@ -55,7 +55,7 @@ async function fetchAccessToken() {
 async function startSession() {
     try {
         const token = await fetchAccessToken();
-        avatar = new StreamingAvatar({ token });
+        avatar = new window.HeygenStreaming.StreamingAvatar({ token });
 
         sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -71,8 +71,8 @@ async function startSession() {
         startButton.disabled = true;
         micButton.disabled = false;
 
-        avatar.on('STREAM_READY', handleStreamReady);
-        avatar.on('STREAM_DISCONNECTED', handleStreamDisconnected);
+        avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_READY, handleStreamReady);
+        avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_DISCONNECTED, handleStreamDisconnected);
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
         alert('Не удалось запустить сессию: ' + error.message);
