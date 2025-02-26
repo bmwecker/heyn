@@ -21,32 +21,41 @@ async function initSpeechRecognition() {
 
 async function createSession() {
     try {
-        // Получаем токен с нашего сервера
         const response = await fetch('/api/create-session');
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка создания сессии');
+        }
         
         sessionInfo = await response.json();
+        console.log('Session info:', sessionInfo);
+        
+        // Создаем SDP для WebRTC
+        const peerConnection = new RTCPeerConnection();
+        const offer = await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        });
+        await peerConnection.setLocalDescription(offer);
         
         await fetch('/api/start-session', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ sessionId: sessionInfo.session_id })
+            body: JSON.stringify({ 
+                sessionId: sessionInfo.session_id,
+                sdp: peerConnection.localDescription
+            })
         });
         
-        // Подключаемся к LiveKit
-        room = new LiveKitClient.Room();
-        await room.connect(sessionInfo.url, sessionInfo.access_token);
-        
-        // Обрабатываем медиа потоки
-        room.on(LiveKitClient.RoomEvent.TrackSubscribed, (track) => {
-            if (track.kind === "video" || track.kind === "audio") {
-                mediaStream = new MediaStream();
-                mediaStream.addTrack(track.mediaStreamTrack);
+        peerConnection.ontrack = (event) => {
+            if (event.track.kind === "video" || event.track.kind === "audio") {
+                mediaStream = event.streams[0];
                 const videoElement = document.getElementById('avatarVideo');
                 videoElement.srcObject = mediaStream;
             }
-        });
+        };
 
         document.getElementById('startButton').disabled = true;
         document.getElementById('stopButton').disabled = false;

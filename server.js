@@ -39,23 +39,48 @@ app.use(express.static('public'));
 // Создание новой сессии
 app.post('/api/create-session', async (req, res) => {
     try {
+        // Сначала получаем токен
+        const tokenResponse = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.create_token`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': API_CONFIG.apiKey
+            }
+        });
+        
+        const tokenData = await tokenResponse.json();
+        
+        if (!tokenData.data || !tokenData.data.token) {
+            throw new Error('Неверный формат токена');
+        }
+
+        // Затем создаем сессию
         const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.new`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-api-key": API_CONFIG.apiKey
+                "x-api-key": API_CONFIG.apiKey,
+                "Authorization": `Bearer ${tokenData.data.token}`
             },
             body: JSON.stringify({
-                version: "v2",
-                avatar_id: "Dexter_Doctor_Standing2_public"
+                quality: "high",
+                avatar_name: "Dexter_Doctor_Standing2_public",
+                voice: {
+                    voice_id: "81bb7c1a521442f6b812b2294a29acc1"
+                }
             })
         });
         
         const data = await response.json();
+        console.log('Session response:', data);
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
         res.json(data);
     } catch (error) {
         console.error('Ошибка создания сессии:', error);
-        res.status(500).json({ error: 'Ошибка создания сессии' });
+        res.status(500).json({ error: 'Ошибка создания сессии: ' + error.message });
     }
 });
 
@@ -69,15 +94,17 @@ app.post('/api/start-session', async (req, res) => {
                 "x-api-key": API_CONFIG.apiKey
             },
             body: JSON.stringify({
-                session_id: req.body.sessionId
+                session_id: req.body.sessionId,
+                sdp: req.body.sdp
             })
         });
         
         const data = await response.json();
+        console.log('Start session response:', data);
         res.json(data);
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
-        res.status(500).json({ error: 'Ошибка запуска сессии' });
+        res.status(500).json({ error: 'Ошибка запуска сессии: ' + error.message });
     }
 });
 
