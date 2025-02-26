@@ -1,6 +1,22 @@
 let avatar = null;
 let recognition = null;
 
+// Ждем загрузки SDK
+function waitForStreamingAvatar() {
+    return new Promise((resolve) => {
+        if (window.StreamingAvatar) {
+            resolve(window.StreamingAvatar);
+        } else {
+            const checkInterval = setInterval(() => {
+                if (window.StreamingAvatar) {
+                    clearInterval(checkInterval);
+                    resolve(window.StreamingAvatar);
+                }
+            }, 100);
+        }
+    });
+}
+
 async function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -38,6 +54,7 @@ async function initSpeechRecognition() {
 
 async function startSession() {
     try {
+        const StreamingAvatar = await waitForStreamingAvatar();
         const response = await fetch('/api/get-token');
         const data = await response.json();
         

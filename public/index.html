@@ -15,7 +15,10 @@
             <button id="micButton" disabled>🎤</button>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@heygen/streaming-avatar/dist/index.min.js"></script>
+    <script type="module">
+      import StreamingAvatar from 'https://cdn.jsdelivr.net/npm/@heygen/streaming-avatar/+esm'
+      window.StreamingAvatar = StreamingAvatar;
+    </script>
     <script src="main.js"></script>
 </body>
 </html> 
