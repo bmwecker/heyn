@@ -4,6 +4,8 @@ const startButton = document.getElementById("startButton");
 const stopButton = document.getElementById("stopButton");
 const micButton = document.getElementById("micButton");
 
+console.log('SDK Status:', window.HeygenStreaming);
+
 let avatar = null;
 let sessionData = null;
 
@@ -46,16 +48,32 @@ function initSpeechRecognition() {
 
 // Получение токена доступа
 async function fetchAccessToken() {
-    const response = await fetch('/api/get-token');
-    const data = await response.json();
-    return data.data.token;
+    try {
+        const response = await fetch('/api/get-token');
+        console.log('Token Response Status:', response.status);
+        const data = await response.json();
+        console.log('Token Data:', data);
+        return data.data.token;
+    } catch (error) {
+        console.error('Error fetching token:', error);
+        throw error;
+    }
 }
 
 // Инициализация сессии аватара
 async function startSession() {
     try {
+        console.log('Starting session...');
+        if (!window.HeygenStreaming) {
+            console.error('SDK not loaded:', window.HeygenStreaming);
+            throw new Error('SDK не загружен');
+        }
+
         const token = await fetchAccessToken();
+        console.log('Got token:', token);
+
         avatar = new window.HeygenStreaming.StreamingAvatar({ token });
+        console.log('Avatar instance created:', avatar);
 
         sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -71,23 +89,32 @@ async function startSession() {
         startButton.disabled = true;
         micButton.disabled = false;
 
+        console.log('Setting up event listeners...');
         avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_READY, handleStreamReady);
         avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_DISCONNECTED, handleStreamDisconnected);
+        console.log('Event listeners set up');
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
+        console.error('Stack:', error.stack);
         alert('Не удалось запустить сессию: ' + error.message);
     }
 }
 
 // Обработка готовности потока
 function handleStreamReady(event) {
+    console.log('Stream ready event:', event);
     if (event.detail && videoElement) {
         videoElement.srcObject = event.detail;
         videoElement.onloadedmetadata = () => {
+            console.log('Video metadata loaded, playing...');
             videoElement.play().catch(console.error);
         };
     } else {
-        console.error("Stream is not available");
+        console.error("Stream is not available", {
+            event: event,
+            detail: event?.detail,
+            videoElement: videoElement
+        });
     }
 }
 
@@ -126,5 +153,12 @@ micButton.addEventListener("click", () => {
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, checking SDK...');
+    if (!window.HeygenStreaming) {
+        console.error('SDK not available on DOMContentLoaded');
+        alert('Ошибка загрузки SDK. Пожалуйста, перезагрузите страницу.');
+        return;
+    }
+    console.log('SDK available:', window.HeygenStreaming);
     initSpeechRecognition();
 }); 
