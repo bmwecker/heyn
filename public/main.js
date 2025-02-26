@@ -36,25 +36,23 @@ async function initSpeechRecognition() {
     }
 }
 
+async function waitForSDK(timeout = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+        if (typeof window.HeygenStreaming !== 'undefined') {
+            console.log('SDK loaded:', window.HeygenStreaming);
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('Таймаут загрузки SDK');
+}
+
 async function startSession() {
     try {
-        // Ждем загрузки SDK
-        if (typeof window.StreamingAvatar === 'undefined') {
-            await new Promise((resolve) => {
-                const checkSDK = setInterval(() => {
-                    if (window.StreamingAvatar) {
-                        clearInterval(checkSDK);
-                        resolve();
-                    }
-                }, 100);
-                // Таймаут через 10 секунд
-                setTimeout(() => {
-                    clearInterval(checkSDK);
-                    throw new Error('Таймаут загрузки SDK');
-                }, 10000);
-            });
-        }
-
+        await waitForSDK();
+        
         const response = await fetch('/api/get-token');
         if (!response.ok) {
             throw new Error(`Ошибка HTTP: ${response.status}`);
@@ -62,7 +60,7 @@ async function startSession() {
         const data = await response.json();
         console.log('Получен токен:', data);
         
-        if (typeof window.StreamingAvatar === 'undefined') {
+        if (!window.HeygenStreaming || !window.HeygenStreaming.StreamingAvatar) {
             throw new Error('SDK HeyGen не загружен');
         }
         
@@ -70,7 +68,7 @@ async function startSession() {
             throw new Error('Неверный формат ответа от сервера');
         }
         
-        avatar = new window.StreamingAvatar({ token: data.data.token });
+        avatar = new window.HeygenStreaming.StreamingAvatar({ token: data.data.token });
         
         const sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -116,7 +114,12 @@ document.getElementById('micButton').addEventListener('click', () => {
 });
 
 // Инициализация после полной загрузки страницы
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('SDK Status:', typeof window.StreamingAvatar);
-    initSpeechRecognition();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await waitForSDK();
+        console.log('SDK Status:', typeof window.HeygenStreaming);
+        initSpeechRecognition();
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+    }
 }); 
