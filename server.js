@@ -43,6 +43,12 @@ app.get('/api/get-token', async (req, res) => {
     
     const data = await response.json();
     console.log('Token response:', data);
+    
+    if (!data.data || !data.data.token) {
+      console.error('Invalid token response:', data);
+      return res.status(500).json({ error: 'Неверный формат ответа от HeyGen API' });
+    }
+    
     res.json(data);
   } catch (error) {
     console.error('Token error:', error);
