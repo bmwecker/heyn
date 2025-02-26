@@ -39,10 +39,18 @@ async function initSpeechRecognition() {
 async function startSession() {
     try {
         const response = await fetch('/api/get-token');
+        if (!response.ok) {
+            throw new Error(`Ошибка HTTP: ${response.status}`);
+        }
         const data = await response.json();
+        console.log('Получен токен:', data);
         
         if (!window.HeygenStreaming || !window.HeygenStreaming.StreamingAvatar) {
             throw new Error('SDK HeyGen не загружен');
+        }
+        
+        if (!data.data || !data.data.token) {
+            throw new Error('Неверный формат ответа от сервера');
         }
         
         avatar = new window.HeygenStreaming.StreamingAvatar({ token: data.data.token });

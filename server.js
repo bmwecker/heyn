@@ -13,11 +13,20 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'x-api-key']
-}));
+// Настройка CORS для всех доменов
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Обработка preflight запросов
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -27,13 +36,16 @@ app.get('/api/get-token', async (req, res) => {
     const response = await fetch('https://api.heygen.com/v1/streaming.create_token', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.HEYGEN_API_KEY
+        'x-api-key': process.env.HEYGEN_API_KEY,
+        'Content-Type': 'application/json'
       }
     });
     
     const data = await response.json();
+    console.log('Token response:', data);
     res.json(data);
   } catch (error) {
+    console.error('Token error:', error);
     res.status(500).json({ error: 'Ошибка получения токена' });
   }
 });
