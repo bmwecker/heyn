@@ -43,11 +43,20 @@ app.post('/api/create-session', async (req, res) => {
         const tokenResponse = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.create_token`, {
             method: 'POST',
             headers: {
-                'x-api-key': API_CONFIG.apiKey
+                'x-api-key': API_CONFIG.apiKey,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         });
         
+        if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            console.error('Token response error:', errorText);
+            throw new Error('Ошибка получения токена');
+        }
+
         const tokenData = await tokenResponse.json();
+        console.log('Token response:', tokenData);
         
         if (!tokenData.data || !tokenData.data.token) {
             throw new Error('Неверный формат токена');
@@ -58,18 +67,25 @@ app.post('/api/create-session', async (req, res) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json",
                 "x-api-key": API_CONFIG.apiKey,
                 "Authorization": `Bearer ${tokenData.data.token}`
             },
             body: JSON.stringify({
                 quality: "high",
-                avatar_name: "Dexter_Doctor_Standing2_public",
+                avatar_id: "Dexter_Doctor_Standing2_public",
                 voice: {
                     voice_id: "81bb7c1a521442f6b812b2294a29acc1"
                 }
             })
         });
         
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Session response error:', errorText);
+            throw new Error('Ошибка создания сессии');
+        }
+
         const data = await response.json();
         console.log('Session response:', data);
 
