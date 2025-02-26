@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: heyn
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: HEYGEN_API_KEY
+        value: ZTRjM2RiMTc2YzYwNDdiZGJlMTgzYmQwMzI5YmU4YmItMTc0MDQzNDc4MA== 

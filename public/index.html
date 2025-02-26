@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный Аватар</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <video id="avatarVideo" autoplay playsinline></video>
+        <div class="controls">
+            <button id="startButton">Начать диалог</button>
+            <button id="stopButton" disabled>Завершить диалог</button>
+            <button id="micButton" disabled>🎤</button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@heygen/streaming-avatar/dist/index.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html> 
