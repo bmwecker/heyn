@@ -41,7 +41,11 @@ async function startSession() {
         const response = await fetch('/api/get-token');
         const data = await response.json();
         
-        avatar = new StreamingAvatar({ token: data.data.token });
+        if (!window.HeygenStreaming || !window.HeygenStreaming.StreamingAvatar) {
+            throw new Error('SDK HeyGen не загружен');
+        }
+        
+        avatar = new window.HeygenStreaming.StreamingAvatar({ token: data.data.token });
         
         const sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -58,6 +62,7 @@ async function startSession() {
         document.getElementById('micButton').disabled = false;
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
+        alert('Не удалось запустить сессию: ' + error.message);
     }
 }
 
@@ -79,4 +84,7 @@ document.getElementById('micButton').addEventListener('click', () => {
     }
 });
 
-initSpeechRecognition(); 
+// Инициализация после полной загрузки страницы
+document.addEventListener('DOMContentLoaded', () => {
+    initSpeechRecognition();
+}); 
