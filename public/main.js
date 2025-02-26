@@ -64,7 +64,7 @@ async function fetchAccessToken() {
 async function startSession() {
     try {
         console.log('Starting session...');
-        if (!window.HeygenStreaming) {
+        if (!window.StreamingAvatar) {
             console.error('SDK not loaded:', window.HeygenStreaming);
             throw new Error('SDK не загружен');
         }
@@ -72,7 +72,7 @@ async function startSession() {
         const token = await fetchAccessToken();
         console.log('Got token:', token);
 
-        avatar = new window.HeygenStreaming.StreamingAvatar({ token });
+        avatar = new window.StreamingAvatar({ token });
         console.log('Avatar instance created:', avatar);
 
         sessionData = await avatar.createStartAvatar({
@@ -90,8 +90,8 @@ async function startSession() {
         micButton.disabled = false;
 
         console.log('Setting up event listeners...');
-        avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_READY, handleStreamReady);
-        avatar.on(window.HeygenStreaming.StreamingEvents.STREAM_DISCONNECTED, handleStreamDisconnected);
+        avatar.on('STREAM_READY', handleStreamReady);
+        avatar.on('STREAM_DISCONNECTED', handleStreamDisconnected);
         console.log('Event listeners set up');
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
@@ -154,11 +154,11 @@ micButton.addEventListener("click", () => {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, checking SDK...');
-    if (!window.HeygenStreaming) {
+    if (!window.StreamingAvatar) {
         console.error('SDK not available on DOMContentLoaded');
         alert('Ошибка загрузки SDK. Пожалуйста, перезагрузите страницу.');
         return;
     }
-    console.log('SDK available:', window.HeygenStreaming);
+    console.log('SDK available:', window.StreamingAvatar);
     initSpeechRecognition();
 }); 
