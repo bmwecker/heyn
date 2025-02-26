@@ -3,11 +3,6 @@ let room = null;
 let mediaStream = null;
 let recognition = null;
 
-const API_CONFIG = {
-    serverUrl: "https://api.heygen.com",
-    token: process.env.HEYGEN_API_KEY
-};
-
 async function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -27,34 +22,16 @@ async function initSpeechRecognition() {
 async function createSession() {
     try {
         // Получаем токен с нашего сервера
-        const tokenResponse = await fetch('/api/get-token');
-        const tokenData = await tokenResponse.json();
-        
-        // Создаем новую сессию
-        const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.new`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${tokenData.data.token}`
-            },
-            body: JSON.stringify({
-                version: "v2",
-                avatar_id: "Dexter_Doctor_Standing2_public"
-            })
-        });
+        const response = await fetch('/api/create-session');
         
         sessionInfo = await response.json();
         
-        // Запускаем стриминг
-        await fetch(`${API_CONFIG.serverUrl}/v1/streaming.start`, {
-            method: "POST",
+        await fetch('/api/start-session', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${tokenData.data.token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                session_id: sessionInfo.session_id
-            })
+            body: JSON.stringify({ sessionId: sessionInfo.session_id })
         });
         
         // Подключаемся к LiveKit
@@ -82,16 +59,14 @@ async function createSession() {
 
 async function sendText(text) {
     try {
-        await fetch(`${API_CONFIG.serverUrl}/v1/streaming.task`, {
-            method: "POST",
+        await fetch('/api/send-text', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${sessionInfo.access_token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                session_id: sessionInfo.session_id,
-                text: text,
-                task_type: "talk"
+                sessionId: sessionInfo.session_id,
+                text: text
             })
         });
     } catch (error) {
@@ -102,14 +77,13 @@ async function sendText(text) {
 async function closeSession() {
     if (sessionInfo) {
         try {
-            await fetch(`${API_CONFIG.serverUrl}/v1/streaming.stop`, {
-                method: "POST",
+            await fetch('/api/stop-session', {
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${sessionInfo.access_token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    session_id: sessionInfo.session_id
+                    sessionId: sessionInfo.session_id
                 })
             });
             
