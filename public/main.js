@@ -65,7 +65,6 @@ async function startSession() {
     try {
         console.log('Starting session...');
         if (!window.StreamingAvatar) {
-            console.error('SDK not loaded:', window.HeygenStreaming);
             throw new Error('SDK не загружен');
         }
 
@@ -75,63 +74,89 @@ async function startSession() {
         avatar = new window.StreamingAvatar({ token });
         console.log('Avatar instance created:', avatar);
 
-        sessionData = await avatar.createStartAvatar({
-            quality: "high",
-            avatar_id: "Dexter_Doctor_Standing2_public",
-            voice: {
-                voice_id: "81bb7c1a521442f6b812b2294a29acc1"
-            }
-        });
-
-        console.log("Session data:", sessionData);
-
-        // Настройка WebRTC
+        // Создаем RTCPeerConnection
         const peerConnection = new RTCPeerConnection({
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }
             ]
         });
 
-        // Добавляем обработчики событий WebRTC
-        peerConnection.onicecandidate = event => {
-            if (event.candidate) {
-                console.log('New ICE candidate:', event.candidate);
+        // Создаем и добавляем медиа-треки
+        const audioTransceiver = peerConnection.addTransceiver('audio', {
+            direction: 'recvonly'
+        });
+        const videoTransceiver = peerConnection.addTransceiver('video', {
+            direction: 'recvonly'
+        });
+
+        // Создаем оффер
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        // Ждем сбора ICE кандидатов
+        await new Promise(resolve => {
+            if (peerConnection.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                peerConnection.addEventListener('icegatheringstatechange', () => {
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        resolve();
+                    }
+                });
+            }
+        });
+
+        // Создаем сессию с полным SDP
+        sessionData = await avatar.createStartAvatar({
+            quality: "high",
+            avatar_id: "Dexter_Doctor_Standing2_public",
+            voice: {
+                voice_id: "81bb7c1a521442f6b812b2294a29acc1"
+            },
+            sdp: peerConnection.localDescription.sdp
+        });
+
+        console.log("Session data:", sessionData);
+
+        if (!sessionData.sdp) {
+            throw new Error('Нет SDP в ответе от сервера');
+        }
+
+        // Устанавливаем удаленный SDP
+        await peerConnection.setRemoteDescription({
+            type: 'answer',
+            sdp: sessionData.sdp
+        });
+
+        // Обработка медиа-потока
+        peerConnection.ontrack = (event) => {
+            console.log('Got remote track:', event.streams[0]);
+            if (event.streams && event.streams[0]) {
+                videoElement.srcObject = event.streams[0];
+                videoElement.play().catch(console.error);
             }
         };
 
-        peerConnection.ontrack = event => {
-            console.log('Got remote track:', event.streams[0]);
-            videoElement.srcObject = event.streams[0];
+        // Обработка состояния подключения
+        peerConnection.onconnectionstatechange = () => {
+            console.log('Connection state:', peerConnection.connectionState);
+            if (peerConnection.connectionState === 'connected') {
+                console.log('WebRTC connected successfully');
+            }
         };
 
-        // Создаем и отправляем SDP оффер
-        const offer = await peerConnection.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-        });
-        await peerConnection.setLocalDescription(offer);
-
-        // Отправляем SDP на сервер
-        const response = await fetch('/api/start-session', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                sessionId: sessionData.session_id,
-                sdp: peerConnection.localDescription
-            })
-        });
-
-        const startData = await response.json();
-        console.log('Start session response:', startData);
-
-        // Устанавливаем удаленный SDP
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(startData.sdp));
+        // Обработка ошибок
+        peerConnection.onicecandidateerror = (event) => {
+            console.error('ICE candidate error:', event);
+        };
 
         stopButton.disabled = false;
         startButton.disabled = true;
         micButton.disabled = false;
+
+        // Сохраняем peerConnection для последующего использования
+        window.peerConnection = peerConnection;
+
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
         console.error('Stack:', error.stack);
@@ -152,15 +177,30 @@ function handleStreamDisconnected() {
 
 // Завершение сессии
 async function stopSession() {
-    if (!avatar || !sessionData) return;
+    try {
+        if (window.peerConnection) {
+            window.peerConnection.close();
+            window.peerConnection = null;
+        }
 
-    await avatar.stopAvatar();
-    videoElement.srcObject = null;
-    avatar = null;
-    
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    micButton.disabled = true;
+        if (videoElement.srcObject) {
+            const tracks = videoElement.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            videoElement.srcObject = null;
+        }
+
+        if (avatar && sessionData) {
+            await avatar.stopAvatar();
+            avatar = null;
+            sessionData = null;
+        }
+
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        micButton.disabled = true;
+    } catch (error) {
+        console.error('Ошибка остановки сессии:', error);
+    }
 }
 
 // Обработчики событий
