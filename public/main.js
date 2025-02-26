@@ -85,36 +85,57 @@ async function startSession() {
 
         console.log("Session data:", sessionData);
 
+        // Настройка WebRTC
+        const peerConnection = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        });
+
+        // Добавляем обработчики событий WebRTC
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                console.log('New ICE candidate:', event.candidate);
+            }
+        };
+
+        peerConnection.ontrack = event => {
+            console.log('Got remote track:', event.streams[0]);
+            videoElement.srcObject = event.streams[0];
+        };
+
+        // Создаем и отправляем SDP оффер
+        const offer = await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        });
+        await peerConnection.setLocalDescription(offer);
+
+        // Отправляем SDP на сервер
+        const response = await fetch('/api/start-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionId: sessionData.session_id,
+                sdp: peerConnection.localDescription
+            })
+        });
+
+        const startData = await response.json();
+        console.log('Start session response:', startData);
+
+        // Устанавливаем удаленный SDP
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(startData.sdp));
+
         stopButton.disabled = false;
         startButton.disabled = true;
         micButton.disabled = false;
-
-        console.log('Setting up event listeners...');
-        avatar.on('STREAM_READY', handleStreamReady);
-        avatar.on('STREAM_DISCONNECTED', handleStreamDisconnected);
-        console.log('Event listeners set up');
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
         console.error('Stack:', error.stack);
         alert('Не удалось запустить сессию: ' + error.message);
-    }
-}
-
-// Обработка готовности потока
-function handleStreamReady(event) {
-    console.log('Stream ready event:', event);
-    if (event.detail && videoElement) {
-        videoElement.srcObject = event.detail;
-        videoElement.onloadedmetadata = () => {
-            console.log('Video metadata loaded, playing...');
-            videoElement.play().catch(console.error);
-        };
-    } else {
-        console.error("Stream is not available", {
-            event: event,
-            detail: event?.detail,
-            videoElement: videoElement
-        });
     }
 }
 

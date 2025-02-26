@@ -117,6 +117,11 @@ app.post('/api/start-session', async (req, res) => {
         
         const data = await response.json();
         console.log('Start session response:', data);
+        
+        if (!data.sdp) {
+            throw new Error('No SDP in response');
+        }
+        
         res.json(data);
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
