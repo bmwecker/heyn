@@ -45,7 +45,7 @@ async function startSession() {
         const data = await response.json();
         console.log('Получен токен:', data);
         
-        if (typeof StreamingAvatar === 'undefined') {
+        if (typeof window.StreamingAvatar === 'undefined') {
             throw new Error('SDK HeyGen не загружен');
         }
         
@@ -53,7 +53,7 @@ async function startSession() {
             throw new Error('Неверный формат ответа от сервера');
         }
         
-        avatar = new StreamingAvatar({ token: data.data.token });
+        avatar = new window.StreamingAvatar({ token: data.data.token });
         
         const sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -64,6 +64,11 @@ async function startSession() {
             const videoElement = document.getElementById('avatarVideo');
             videoElement.srcObject = event.detail;
             videoElement.play().catch(console.error);
+        });
+
+        avatar.on('error', (error) => {
+            console.error('Avatar error:', error);
+            alert('Ошибка аватара: ' + error.message);
         });
 
         document.getElementById('startButton').disabled = true;
