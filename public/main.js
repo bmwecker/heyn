@@ -45,7 +45,7 @@ async function startSession() {
         const data = await response.json();
         console.log('Получен токен:', data);
         
-        if (typeof window.StreamingAvatar === 'undefined') {
+        if (typeof StreamingAvatar === 'undefined') {
             throw new Error('SDK HeyGen не загружен');
         }
         
@@ -53,7 +53,7 @@ async function startSession() {
             throw new Error('Неверный формат ответа от сервера');
         }
         
-        avatar = new window.StreamingAvatar({ token: data.data.token });
+        avatar = new StreamingAvatar({ token: data.data.token });
         
         const sessionData = await avatar.createStartAvatar({
             quality: "high",
@@ -100,5 +100,6 @@ document.getElementById('micButton').addEventListener('click', () => {
 
 // Инициализация после полной загрузки страницы
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('SDK Status:', typeof StreamingAvatar);
     initSpeechRecognition();
 }); 
