@@ -30,7 +30,7 @@ async function startSession() {
         const token = await fetchAccessToken();
         
         // Создаем экземпляр аватара
-        avatar = new window.StreamingAvatar({ token });
+        avatar = new StreamingAvatar({ token });
         
         // Запускаем сессию
         sessionData = await avatar.createStartAvatar({
