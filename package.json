@@ -9,6 +9,7 @@
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
-    "node-fetch": "^3.3.0"
+    "node-fetch": "^3.3.0",
+    "@heygen/streaming-avatar": "^2.0.9"
   }
 } 

@@ -35,6 +35,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/node_modules', express.static('node_modules'));
 
 // Создание новой сессии
 app.post('/api/create-session', async (req, res) => {
