@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Интерактивный Аватар</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://sdk.heygen.ai/streaming-avatar@latest/index.min.js"></script>
+    <script type="module">
+        import StreamingAvatar from '/sdk-bundle.js';
+        window.StreamingAvatar = StreamingAvatar;
+    </script>
 </head>
 <body>
     <div class="container">
@@ -17,6 +20,6 @@
         </div>
         <div id="status"></div>
     </div>
-    <script src="main.js"></script>
+    <script src="main.js" type="module"></script>
 </body>
 </html> 
