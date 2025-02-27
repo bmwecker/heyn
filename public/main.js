@@ -9,25 +9,37 @@ let sessionData = null;
 
 // Получение токена доступа
 async function fetchAccessToken() {
-    const response = await fetch('/api/get-token');
-    const data = await response.json();
-    return data.data.token;
+    try {
+        const response = await fetch('/api/get-token');
+        if (!response.ok) {
+            throw new Error('Ошибка получения токена');
+        }
+        const data = await response.json();
+        return data.data.token;
+    } catch (error) {
+        console.error('Error fetching token:', error);
+        throw error;
+    }
 }
 
 // Инициализация сессии аватара
 async function startSession() {
     try {
         console.log('Starting session...');
-        if (typeof StreamingAvatar === 'undefined') {
-            throw new Error('SDK не загружен. Попробуйте перезагрузить страницу.');
+        
+        // Проверяем доступность SDK
+        if (!window.HeygenStreaming || !window.HeygenStreaming.StreamingAvatar) {
+            throw new Error('SDK не загружен');
         }
 
         const token = await fetchAccessToken();
         console.log('Got token:', token);
 
-        avatar = new StreamingAvatar({ token });
+        // Создаем экземпляр аватара
+        avatar = new window.HeygenStreaming.StreamingAvatar({ token });
         console.log('Avatar instance created:', avatar);
 
+        // Запускаем сессию
         sessionData = await avatar.createStartAvatar({
             quality: "high",
             avatar_id: "Dexter_Doctor_Standing2_public",
@@ -38,10 +50,7 @@ async function startSession() {
 
         console.log("Session data:", sessionData);
 
-        if (!sessionData || !sessionData.url) {
-            throw new Error('Неверный ответ от сервера');
-        }
-
+        // Обработчик готовности потока
         avatar.on('STREAM_READY', (event) => {
             console.log('Stream ready:', event);
             if (event.detail) {
@@ -50,6 +59,7 @@ async function startSession() {
             }
         });
 
+        // Обработчик отключения
         avatar.on('STREAM_DISCONNECTED', () => {
             console.log('Stream disconnected');
             videoElement.srcObject = null;
@@ -58,10 +68,12 @@ async function startSession() {
             micButton.disabled = true;
         });
 
+        // Обработчик ошибок
         avatar.on('error', (error) => {
             console.error('Avatar error:', error);
         });
 
+        // Обновляем состояние кнопок
         stopButton.disabled = false;
         startButton.disabled = true;
         micButton.disabled = false;
@@ -74,15 +86,19 @@ async function startSession() {
 
 // Завершение сессии
 async function stopSession() {
-    if (avatar) {
-        await avatar.stopAvatar();
-        videoElement.srcObject = null;
-        avatar = null;
-        sessionData = null;
+    try {
+        if (avatar) {
+            await avatar.stopAvatar();
+            videoElement.srcObject = null;
+            avatar = null;
+            sessionData = null;
+        }
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        micButton.disabled = true;
+    } catch (error) {
+        console.error('Ошибка остановки сессии:', error);
     }
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    micButton.disabled = true;
 }
 
 // Инициализация распознавания речи
@@ -109,7 +125,7 @@ function initSpeechRecognition() {
                 });
                 
                 const data = await response.json();
-                if (data.response) {
+                if (data.response && avatar) {
                     await avatar.speak({
                         text: data.response,
                         voice_id: "81bb7c1a521442f6b812b2294a29acc1"
@@ -133,5 +149,6 @@ micButton.addEventListener("click", () => {
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('SDK Status:', window.HeygenStreaming);
     initSpeechRecognition();
 }); 
