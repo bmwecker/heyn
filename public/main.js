@@ -18,6 +18,10 @@ async function fetchAccessToken() {
 async function startSession() {
     try {
         console.log('Starting session...');
+        if (typeof StreamingAvatar === 'undefined') {
+            throw new Error('SDK не загружен. Попробуйте перезагрузить страницу.');
+        }
+
         const token = await fetchAccessToken();
         console.log('Got token:', token);
 
@@ -34,7 +38,12 @@ async function startSession() {
 
         console.log("Session data:", sessionData);
 
+        if (!sessionData || !sessionData.url) {
+            throw new Error('Неверный ответ от сервера');
+        }
+
         avatar.on('STREAM_READY', (event) => {
+            console.log('Stream ready:', event);
             if (event.detail) {
                 videoElement.srcObject = event.detail;
                 videoElement.play().catch(console.error);
@@ -42,10 +51,15 @@ async function startSession() {
         });
 
         avatar.on('STREAM_DISCONNECTED', () => {
+            console.log('Stream disconnected');
             videoElement.srcObject = null;
             startButton.disabled = false;
             stopButton.disabled = true;
             micButton.disabled = true;
+        });
+
+        avatar.on('error', (error) => {
+            console.error('Avatar error:', error);
         });
 
         stopButton.disabled = false;
