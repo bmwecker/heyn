@@ -3,6 +3,7 @@ const videoElement = document.getElementById("avatarVideo");
 const startButton = document.getElementById("startButton");
 const stopButton = document.getElementById("stopButton");
 const micButton = document.getElementById("micButton");
+const statusDiv = document.getElementById("status");
 
 let avatar = null;
 let sessionData = null;
@@ -25,52 +26,34 @@ async function fetchAccessToken() {
 // Инициализация сессии аватара
 async function startSession() {
     try {
-        console.log('Starting session...');
-        
-        // Проверяем доступность SDK
-        if (typeof StreamingAvatar === 'undefined') {
-            throw new Error('SDK не загружен');
-        }
-
+        statusDiv.textContent = 'Запуск сессии...';
         const token = await fetchAccessToken();
-        console.log('Got token:', token);
-
+        
         // Создаем экземпляр аватара
-        avatar = new StreamingAvatar({ token });
-        console.log('Avatar instance created:', avatar);
-
+        avatar = new window.StreamingAvatar({ token });
+        
         // Запускаем сессию
         sessionData = await avatar.createStartAvatar({
             quality: "high",
             avatar_id: "Dexter_Doctor_Standing2_public",
-            voice: {
-                voice_id: "81bb7c1a521442f6b812b2294a29acc1"
-            }
+            disableIdleTimeout: true,
+            language: "ru"
         });
 
-        console.log("Session data:", sessionData);
-
-        // Обработчик готовности потока
-        avatar.on('STREAM_READY', (event) => {
-            console.log('Stream ready:', event);
-            if (event.detail) {
-                videoElement.srcObject = event.detail;
-                videoElement.play().catch(console.error);
-            }
+        // Настраиваем обработчики событий
+        avatar.on('STREAM_READY', handleStreamReady);
+        avatar.on('STREAM_DISCONNECTED', handleStreamDisconnected);
+        avatar.on('USER_START', () => {
+            statusDiv.textContent = 'Слушаю...';
         });
-
-        // Обработчик отключения
-        avatar.on('STREAM_DISCONNECTED', () => {
-            console.log('Stream disconnected');
-            videoElement.srcObject = null;
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            micButton.disabled = true;
+        avatar.on('USER_STOP', () => {
+            statusDiv.textContent = 'Обработка...';
         });
-
-        // Обработчик ошибок
-        avatar.on('error', (error) => {
-            console.error('Avatar error:', error);
+        avatar.on('AVATAR_START_TALKING', () => {
+            statusDiv.textContent = 'Аватар говорит...';
+        });
+        avatar.on('AVATAR_STOP_TALKING', () => {
+            statusDiv.textContent = 'Ожидание...';
         });
 
         // Обновляем состояние кнопок
@@ -80,8 +63,26 @@ async function startSession() {
 
     } catch (error) {
         console.error('Ошибка запуска сессии:', error);
-        alert('Не удалось запустить сессию: ' + error.message);
+        statusDiv.textContent = 'Ошибка: ' + error.message;
     }
+}
+
+// Обработка готовности потока
+function handleStreamReady(event) {
+    if (event.detail) {
+        videoElement.srcObject = event.detail;
+        videoElement.play().catch(console.error);
+        statusDiv.textContent = 'Поток готов';
+    }
+}
+
+// Обработка отключения
+function handleStreamDisconnected() {
+    videoElement.srcObject = null;
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    micButton.disabled = true;
+    statusDiv.textContent = 'Отключено';
 }
 
 // Завершение сессии
@@ -96,8 +97,10 @@ async function stopSession() {
         startButton.disabled = false;
         stopButton.disabled = true;
         micButton.disabled = true;
+        statusDiv.textContent = 'Сессия завершена';
     } catch (error) {
         console.error('Ошибка остановки сессии:', error);
+        statusDiv.textContent = 'Ошибка остановки: ' + error.message;
     }
 }
 
@@ -113,7 +116,7 @@ function initSpeechRecognition() {
 
         recognition.onresult = async (event) => {
             const text = event.results[0][0].transcript;
-            console.log('Распознано:', text);
+            statusDiv.textContent = 'Распознано: ' + text;
             
             try {
                 const response = await fetch('/api/chat', {
@@ -133,6 +136,7 @@ function initSpeechRecognition() {
                 }
             } catch (error) {
                 console.error('Ошибка обработки голосового ввода:', error);
+                statusDiv.textContent = 'Ошибка: ' + error.message;
             }
         };
     }
@@ -143,12 +147,13 @@ startButton.addEventListener("click", startSession);
 stopButton.addEventListener("click", stopSession);
 micButton.addEventListener("click", () => {
     if (recognition) {
+        statusDiv.textContent = 'Говорите...';
         recognition.start();
     }
 });
 
-// Инициализация при загрузке страницы
+// Инициализация
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('SDK Status:', typeof StreamingAvatar);
+    statusDiv.textContent = 'Готов к запуску';
     initSpeechRecognition();
 }); 
